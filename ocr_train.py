@@ -1,14 +1,14 @@
 import numpy as np
 import tensorflow as tf
 import os
-from genplate import gen_plate, chars, model_path
+from genplate import gen_plate, chars
 
 text, img = gen_plate()
 
 img_h, img_w = 120, 32
 text_len, chars_len = len(text), len(chars)
 
-
+model_path = "./model/plate/"
 model_name = 'plate.ckpt'
 
 
@@ -103,12 +103,11 @@ def train():
 
     with tf.Session() as sess:
         step = 0
-        files = os.listdir(model_path)
-        for file in files:
-            if model_name in file:
-                step = int(file.split('-')[1].split('-')[1])
-                saver.restore(sess, model_path+model_name)
-                break
+        # 读取模型
+        model = tf.train.latest_checkpoint(model_path)
+        if model:
+            saver.restore(sess, model)
+            step = int(model.split('-')[1]) + 1
         else:
             sess.run(tf.global_variables_initializer())
         while True:
@@ -121,9 +120,8 @@ def train():
                 batch_x_test, batch_y_test = get_next_batch(100)
                 acc = sess.run(accuracy, feed_dict={x: batch_x_test, y: batch_y_test, keep_prob: 1.})
                 print(step, acc)
-                # 如果准确率大于80%,保存模型,完成训练
-                # if acc > 0.9:
-                if step > 100:
+                # 如果准确率大于指定值,保存模型,完成训练
+                if acc > 0.9:
                     saver.save(sess, model_path + model_name, global_step=step)
                     break
             step += 1
