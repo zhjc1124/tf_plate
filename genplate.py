@@ -58,11 +58,12 @@ class GenPlate:
 
         return plateStr
 
-    def genBatch(self, size):
+    def genBatch(self, size=(120, 32)):
         plateStr = self.genPlateString(-1, -1)
         img = self.generate(plateStr)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         img = cv2.resize(img, size)
+        cv2.imwrite('123.jpg', img)
         return plateStr, img
 
 
@@ -70,7 +71,7 @@ G = GenPlate('./font/platech.ttf', './font/platechar.ttf', './NoPlates')
 
 
 def gen_plate():
-    return G.genBatch((120, 32))
+    return G.genBatch()
 
 
 if __name__ == '__main__':

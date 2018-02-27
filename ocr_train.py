@@ -1,21 +1,22 @@
 import numpy as np
 import tensorflow as tf
 import os
+import cv2
 from genplate import gen_plate, chars
 
-text, img = gen_plate()
+text_, img_ = gen_plate()
 
 img_h, img_w = 120, 32
-text_len, chars_len = len(text), len(chars)
+text_len, chars_len = len(text_), len(chars)
 
 model_path = "./model/plate/"
 model_name = 'plate.ckpt'
 
 
 def text2vec(text):
-    vector = np.zeros(len(text)*len(chars))
+    vector = np.zeros(text_len*chars_len)
     for i, v in enumerate(text):
-        idx = i * len(chars) + chars.index(v)
+        idx = i * chars_len + chars.index(v)
         vector[idx] = 1
     return vector
 
@@ -29,13 +30,21 @@ def vec2text(vector):
     return ''.join(text)
 
 
+def img2vec(image):
+    if len(image.shape) == 3:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    if image.shape != (32, 120):
+        image = cv2.resize(image, (120, 32))
+    return image.flatten() / 255
+
+
 def get_next_batch(batch_size=128):
     batch_x = np.zeros([batch_size, img_h * img_w])
     batch_y = np.zeros([batch_size, text_len * chars_len])
 
     for i in range(batch_size):
         text, image = gen_plate()
-        batch_x[i, :] = image.flatten() / 255
+        batch_x[i, :] = img2vec(image)
         batch_y[i, :] = text2vec(text)
     return batch_x, batch_y
 
@@ -104,10 +113,12 @@ def train():
     with tf.Session() as sess:
         step = 0
         # 读取模型
+        pre = 0
         model = tf.train.latest_checkpoint(model_path)
         if model:
             saver.restore(sess, model)
-            step = int(model.split('-')[1]) + 1
+            pre = int(model.split('-')[1])
+            step = pre + 1
         else:
             sess.run(tf.global_variables_initializer())
         while True:
@@ -121,7 +132,9 @@ def train():
                 acc = sess.run(accuracy, feed_dict={x: batch_x_test, y: batch_y_test, keep_prob: 1.})
                 print(step, acc)
                 # 如果准确率大于指定值,保存模型,完成训练
-                if acc > 0.9:
+                # if acc > 0.9:
+                # 每10000次保存一下，避免白跑了，用bash命令 while :; do ;done
+                if step >= pre + 10000:
                     saver.save(sess, model_path + model_name, global_step=step)
                     break
             step += 1
@@ -133,3 +146,4 @@ keep_prob = tf.placeholder(tf.float32)
 
 if __name__ == '__main__':
     train()
+
