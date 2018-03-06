@@ -128,7 +128,7 @@ def random_envirment(img, data_set):
 
 def random_scene(img, data_set):
     '''将车牌放入自然场景图像中，并返回该图像和位置信息'''
-    bg_img_path = data_set[r(len(data_set))]
+    bg_img_path = './data/scene/' + data_set[r(len(data_set))]
     # print bg_img_path
     env = cv2.imread(bg_img_path)
     if env is None:

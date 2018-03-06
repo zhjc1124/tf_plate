@@ -62,32 +62,60 @@ class GenPlateScene:
         # cv2.imwrite('09.jpg', com)
         return com, loc
 
-    def gen_batch(self, batchSize, outputPath):
+    def gen_batch(self, batchSize, outputPath, xmlPath):
         '''批量生成图片'''
-        if not os.path.exists(outputPath):
-            os.mkdir(outputPath)
-        for i in range(batchSize):
+        i = 1
+        if not os.path.isdir(outputPath):
+            os.makedirs(outputPath)
+        if not os.path.isdir(xmlPath):
+            os.makedirs(xmlPath)
+        if os.listdir(outputPath):
+            i = max(map(lambda x: int(x.split('.')[0]), os.listdir(outputPath))) + 1
+        while True:
+            if i == batchSize + 1:
+                return
             plate_str = self.gen_plate_string()
             img, loc = self.generate(plate_str)
             if img is None:
                 continue
-            cv2.imwrite(outputPath + "/" + str(i).zfill(2) + ".jpg", img)
-            with open(outputPath + "/" + str(i).zfill(2) + ".txt", 'w') as obj:
-                line = ','.join([str(v) for v in loc]) + ',"' + plate_str + '"\n'
-                obj.write(line)
+            cv2.imwrite(outputPath + "/" + str(i).zfill(6) + ".jpg", img)
+            print(loc, plate_str, str(i).zfill(6))
+            self.gen_xml(i, loc, xmlPath)
+            i += 1
 
-
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--bg_dir', default='/Users/zhangxin/data/OCR/SynthText/bg_img', help='bg_img dir')
-    parser.add_argument('--out_dir', default='./plate_train/', help='output dir')
-    parser.add_argument('--make_num', default=10000, type=int, help='num')
-    return parser.parse_args()
-
+    def gen_xml(self, i, loc, xmlPath):
+        with open(xmlPath + "/" + str(i).zfill(6) + ".xml", 'w') as obj:
+            obj.write('<annotation>\n')
+            obj.write('    <folder>VOC2012</folder>\n')
+            obj.write('    <filename>%s.jpg</filename>\n' % str(i).zfill(6))
+            obj.write('    <source>\n')
+            obj.write('        <database>0</database>\n')
+            obj.write('        <annotation>1</annotation>\n')
+            obj.write('        <image>2</image>\n')
+            obj.write('    </source>\n')
+            obj.write('    <size>\n')
+            obj.write('        <width>1920</width>\n')
+            obj.write('        <height>1080</height>\n')
+            obj.write('        <depth>3</depth>\n')
+            obj.write('    </size>\n')
+            obj.write('    <segmented>1</segmented>\n')
+            obj.write('    <object>\n')
+            obj.write('        <name>plate</name>\n')
+            obj.write('        <pose>unspecified</pose>\n')
+            obj.write('        <truncated>0</truncated>\n')
+            obj.write('        <difficult>0</difficult>\n')
+            obj.write('        <bndbox>\n')
+            obj.write('            <xmin>%s</xmin>\n' % loc[0])
+            obj.write('            <ymin>%s</ymin>\n' % loc[1])
+            obj.write('            <xmax>%s</xmax>\n' % loc[2])
+            obj.write('            <ymax>%s</ymax>\n' % loc[3])
+            obj.write('        </bndbox>\n')
+            obj.write('    </object>\n')
+            obj.write('</annotation>\n')
 
 def main():
     G = GenPlateScene("./font/platech.ttf", './font/platechar.ttf')
-    G.gen_batch(10000, './plate_train/')
+    G.gen_batch(100, './VOCdevkit/VOC2012/JPEGImages', './VOCdevkit/VOC2012/Annotations')
 
 
 if __name__ == '__main__':
